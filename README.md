@@ -1,3 +1,5 @@
+### DelvePlus-Timer ###
+
 Just /delve and you see the options available.
 
 1.0 - Basic functionality (Thanks to Chatgpt)
