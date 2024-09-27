@@ -1,37 +1,106 @@
-local optionsPanel = CreateFrame("Frame", "DelvePlusTimerOptions", UIParent)
-optionsPanel.name = "DelvePlus Timer"
+local AceGUI = LibStub("AceGUI-3.0")
+local AceConfig = LibStub("AceConfig-3.0")
+local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 
--- Schriftgröße-Option
-local fontSizeSlider = CreateFrame("Slider", "FontSizeSlider", optionsPanel, "OptionsSliderTemplate")
-fontSizeSlider:SetPoint("TOPLEFT", 20, -40)
-fontSizeSlider:SetMinMaxValues(10, 30)
-fontSizeSlider:SetValue(DelvePlusTimerDB.fontSize)
-fontSizeSlider:SetValueStep(1)
-fontSizeSlider:SetScript("OnValueChanged", function(self, value)
-    DelvePlusTimerDB.fontSize = value
-    timerText:SetFont(DelvePlusTimerDB.font, value)
-end)
-fontSizeSlider.text = _G[fontSizeSlider:GetName().."Text"]
-fontSizeSlider.text:SetText("Schriftgröße")
-fontSizeSlider.low = _G[fontSizeSlider:GetName().."Low"]
-fontSizeSlider.low:SetText("10")
-fontSizeSlider.high = _G[fontSizeSlider:GetName().."High"]
-fontSizeSlider.high:SetText("30")
+-- Lokalisierung
+local L = {}
+local locale = GetLocale()
 
--- Transparenz-Option
-local transparencySlider = CreateFrame("Slider", "TransparencySlider", optionsPanel, "OptionsSliderTemplate")
-transparencySlider:SetPoint("TOPLEFT", 20, -80)
-transparencySlider:SetMinMaxValues(0, 1)
-transparencySlider:SetValue(DelvePlusTimerDB.transparency)
-transparencySlider:SetValueStep(0.1)
-transparencySlider:SetScript("OnValueChanged", function(self, value)
-    DelvePlusTimerDB.transparency = value
-    timerFrame:SetBackdropColor(0, 0, 0, value)
-end)
-transparencySlider.text = _G[transparencySlider:GetName().."Text"]
-transparencySlider.text:SetText("Transparenz")
-transparencySlider.low = _G[transparencySlider:GetName().."Low"]
-transparencySlider.low:SetText("0")
-transparencySlider.high = _G[transparencySlider:GetName().."High"]
-transparencySlider.high:SetText("1")
+if locale == "deDE" then
+    L["Font"] = "Schriftart"
+    L["FontSize"] = "Schriftgröße"
+    L["Lock"] = "Timer sperren"
+    L["Show"] = "Timer anzeigen"
+    L["FontDesc"] = "Wähle die Schriftart für den Timer."
+    L["FontSizeDesc"] = "Stelle die Schriftgröße für den Timer ein."
+    L["LockDesc"] = "Sperrt den Timer an seiner Position."
+    L["ShowDesc"] = "Zeigt oder versteckt den Timer."
+else
+    L["Font"] = "Font"
+    L["FontSize"] = "Font Size"
+    L["Lock"] = "Lock Timer"
+    L["Show"] = "Show Timer"
+    L["FontDesc"] = "Select the font for the timer."
+    L["FontSizeDesc"] = "Set the font size for the timer."
+    L["LockDesc"] = "Locks the timer at its position."
+    L["ShowDesc"] = "Shows or hides the timer."
+end
 
+-- Standard Optionen
+local options = {
+    name = "DelvePlus Timer Einstellungen",
+    handler = DelvePlusTimer,
+    type = "group",
+    args = {
+        font = {
+            type = "select",
+            name = L["Font"],
+            desc = L["FontDesc"],
+            values = {
+                ["Fonts\\FRIZQT__.TTF"] = "Friz Quadrata",
+                ["Interface\\AddOns\\ElvUI\\Core\\media\\Fonts\\Expressway.ttf"] = "Expressway",
+            },
+            get = function(info) return DelvePlusTimer.db.profile.font end,
+            set = function(info, value)
+                DelvePlusTimer.db.profile.font = value
+                DelvePlusTimer:UpdateTimerFont()  -- Schriftart und Schriftgröße aktualisieren
+            end,
+        },
+        fontSize = {
+            type = "range",
+            name = L["FontSize"],
+            desc = L["FontSizeDesc"],
+            min = 10, max = 50, step = 1,
+            get = function(info) return DelvePlusTimer.db.profile.fontSize end,
+            set = function(info, value)
+                DelvePlusTimer.db.profile.fontSize = value
+                DelvePlusTimer:UpdateTimerFont()  -- Schriftgröße aktualisieren
+            end,
+        },
+        lock = {
+            type = "toggle",
+            name = L["Lock"],
+            desc = L["LockDesc"],
+            get = function(info) return DelvePlusTimer.db.profile.locked end,
+            set = function(info, value)
+                if value then
+                    DelvePlusTimer:LockTimerFrame()
+                else
+                    DelvePlusTimer:UnlockTimerFrame()
+                end
+            end,
+        },
+        show = {
+            type = "toggle",
+            name = L["Show"],
+            desc = L["ShowDesc"],
+            get = function(info) return DelvePlusTimer.db.profile.visible end,
+            set = function(info, value)
+                if value then
+                    DelvePlusTimer:ShowTimerFrame()
+                else
+                    DelvePlusTimer:HideTimerFrame()
+                end
+            end,
+        },
+    },
+}
+
+-- Registriere das Optionsmenü bei AceConfig
+AceConfig:RegisterOptionsTable("DelvePlusTimer", options)
+AceConfigDialog:AddToBlizOptions("DelvePlusTimer", "DelvePlus Timer")
+
+-- AceConfigDialog verwenden, um die Optionen zu öffnen
+SLASH_DELVETIMER1 = "/delve"
+SlashCmdList["DELVETIMER"] = function(msg)
+    if msg == "config" then
+        -- Öffnet das Optionsmenü mit AceConfigDialog
+        AceConfigDialog:Open("DelvePlusTimer")
+    elseif msg == "start" then
+        DelvePlusTimer:StartTimer()  -- Timer starten
+    elseif msg == "stop" then
+        DelvePlusTimer:StopTimer()  -- Timer stoppen
+    else
+        print("Verwende /delve start, /delve stop, oder /delve config, um das Optionsfenster zu öffnen.")
+    end
+end
